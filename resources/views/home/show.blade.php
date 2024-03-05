@@ -65,7 +65,7 @@
                                                     class="rounded-circle me-2" style="width: 40px;">
                                             @endif
                                             <div>
-                                                <strong>{{ $komentar->user->Username }}</strong>
+                                                <strong>{{ $komentar->user->NamaLengkap }}</strong>
                                                 <p>{{ $komentar->IsiKomentar }}</p>
                                             </div>
                                         </div>
@@ -173,7 +173,7 @@
                                 <div class="d-flex align-items-center">
                                     <img src="{{ asset('storage/user_profile/' . auth()->user()->profile_picture) }}" alt="Profile Picture" class="rounded-circle me-2" style="width: 40px;">
                                     <div>
-                                        <strong>{{ auth()->user()->Username }}</strong>
+                                        <strong>{{ auth()->user()->NamaLengkap }}</strong>
                                         <p>${response.comment.IsiKomentar}</p>
                                     </div>
                                 </div>
