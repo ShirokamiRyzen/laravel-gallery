@@ -37,7 +37,7 @@ class DashController extends Controller
         if ($request->hasFile('Avatar')) {
             $avatar = $request->file('Avatar');
             $avatarName = time().'.'.$avatar->getClientOriginalExtension();
-            $avatar->storeAs('storage/user_profile', $avatarName);
+            $avatar->storeAs('public/user_profile', $avatarName);
             $user->profile_picture = $avatarName;
             $user->save();
         }
