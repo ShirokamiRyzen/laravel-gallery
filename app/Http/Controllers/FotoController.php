@@ -51,94 +51,102 @@ class FotoController extends Controller
 
     public function store(Request $request)
     {
-        try {
-            // validasi request
-            $request->validate([
-                'judul_foto' => 'required',
-                'deskripsi_foto' => 'required',
-                'album_id' => 'required|exists:albums,id',
-                'foto' => 'required|image|mimes:jpeg,png,jpg,gif',
-            ]);
+        // 1) Validasi
+        $request->validate([
+            'judul_foto' => 'required|string',
+            'deskripsi_foto' => 'required|string',
+            'album_id' => 'required|exists:albums,id',
+            'foto' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ]);
 
-            // Ambil ID pengguna yang sedang login lalu ambil username
-            $userId = Auth::id();
-            $username = Auth::user()->Username;
-
-            // Ambil filename dari gambar
-            $originalFilename = $request->file('foto')->getClientOriginalName();
-
-            // Tambahkan filename dengan username
-            $newFilename = pathinfo($originalFilename, PATHINFO_FILENAME) . '_' . $username . '.' . $request->file('foto')->getClientOriginalExtension();
-
-            // Simpan gambar ke storage
-            $photoPath = $request->file('foto')->storeAs('user_photos/' . $userId, $newFilename, 'public');
-
-            // Buat record baru
-            Foto::create([
-                'JudulFoto' => $request->judul_foto,
-                'DeskripsiFoto' => $request->deskripsi_foto,
-                'LokasiFile' => $photoPath,
-                'id_user' => $userId,
-                'id_album' => $request->album_id, // Simpan ID album
-            ]);
-
-            // Redirect ke halaman index dengan pesan swal
-            return redirect()->route('foto.index')->with('success', 'Photo created successfully');
-        } catch (\Exception $e) {
-            // Return error message dengan swal
-            return redirect()->back()->with('error', 'Not a valid image file');
+        // 2) Ambil file
+        $file = $request->file('foto');
+        if (!$file || !$file->isValid()) {
+            return back()->with('error', 'Gagal upload foto.');
         }
+
+        // 3) Buat nama baru
+        $userId = Auth::id();
+        $username = Auth::user()->Username;
+        $baseName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $ext = $file->getClientOriginalExtension();
+        $newName = "{$baseName}_{$username}.{$ext}";
+
+        // 4) Tentukan folder tujuan di storage/app/public
+        $dirAbsolute = storage_path("app/public/user_photos/{$userId}");
+        if (!file_exists($dirAbsolute)) {
+            mkdir($dirAbsolute, 0755, true);
+        }
+
+        // 5) Pindahkan file dari tmp ke folder tujuan
+        $file->move($dirAbsolute, $newName);
+
+        // 6) Simpan path relatif untuk DB
+        $photoPath = "user_photos/{$userId}/{$newName}";
+
+        // 7) Buat record
+        Foto::create([
+            'JudulFoto' => $request->judul_foto,
+            'DeskripsiFoto' => $request->deskripsi_foto,
+            'LokasiFile' => $photoPath,
+            'id_user' => $userId,
+            'id_album' => $request->album_id,
+        ]);
+
+        return redirect()->route('foto.index')
+            ->with('success', 'Photo created successfully');
     }
 
     public function update(Request $request, $id)
     {
-        try {
-            // Validasi request
-            $request->validate([
-                'judul_foto' => 'required',
-                'deskripsi_foto' => 'required',
-                'album_id' => 'required|exists:albums,id',
-                'foto' => 'image|mimes:jpeg,png,jpg,gif',
-            ]);
+        // 1) Validasi dasar
+        $request->validate([
+            'judul_foto' => 'required|string',
+            'deskripsi_foto' => 'required|string',
+            'album_id' => 'required|exists:albums,id',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ]);
 
-            // Cari foto berdasarkan ID
-            $foto = Foto::findOrFail($id);
+        // 2) Ambil record
+        $foto = Foto::findOrFail($id);
+        $foto->JudulFoto = $request->judul_foto;
+        $foto->DeskripsiFoto = $request->deskripsi_foto;
+        $foto->id_album = $request->album_id;
 
-            // Update the photo data
-            $foto->JudulFoto = $request->judul_foto;
-            $foto->DeskripsiFoto = $request->deskripsi_foto;
-            $foto->id_album = $request->album_id;
-
-            // Cek apakah ada file gambar yang diunggah
-            if ($request->hasFile('foto')) {
-                // Validasi request
-                $request->validate([
-                    'foto' => 'image|mimes:jpeg,png,jpg,gif',
-                ]);
-
-                $originalFilename = $request->file('foto')->getClientOriginalName();
-
-                $newFilename = pathinfo($originalFilename, PATHINFO_FILENAME) . '_' . Auth::user()->Username . '.' . $request->file('foto')->getClientOriginalExtension();
-
-                $photoPath = $request->file('foto')->storeAs('user_photos/' . $foto->id_user, $newFilename, 'public');
-
-                // Hapus file gambar lama
-                Storage::delete($foto->LokasiFile);
-
-                // Update lokasi file
-                $foto->LokasiFile = $photoPath;
+        // 3) Jika ada file baru, pindahkan manual
+        if ($request->hasFile('foto')) {
+            $file = $request->file('foto');
+            if (!$file->isValid()) {
+                return back()->with('error', 'File upload gagal.');
             }
 
-            // Simpan perubahan
-            $foto->save();
+            // nama baru
+            $base = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = $file->getClientOriginalExtension();
+            $user = Auth::user()->Username;
+            $new = "{$base}_{$user}.{$ext}";
+            $uid = $foto->id_user;
 
-            // Redirect ke halaman index dengan pesan swal
-            return redirect()->route('foto.index')->with('success', 'Photo updated successfully');
-        } catch (\Exception $e) {
+            // folder tujuan
+            $destDir = storage_path("app/public/user_photos/{$uid}");
+            if (!file_exists($destDir)) {
+                mkdir($destDir, 0755, true);
+            }
 
-            // Return error message dengan swal
-            return redirect()->back()->with('error', 'Not a valid image file');
+            // move tmp → public storage
+            $file->move($destDir, $new);
+
+            // hapus file lama di disk public
+            Storage::disk('public')->delete($foto->LokasiFile);
+
+            // update path di DB
+            $foto->LokasiFile = "user_photos/{$uid}/{$new}";
         }
+
+        $foto->save();
+
+        return redirect()->route('foto.index')
+            ->with('success', 'Photo updated successfully');
     }
 
     public function destroy($id)

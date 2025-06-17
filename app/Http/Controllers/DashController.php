@@ -22,7 +22,7 @@ class DashController extends Controller
             'user' => $user
         ]);
     }
-    
+
     public function update(Request $request)
     {
         $user = Auth::user();
@@ -34,31 +34,38 @@ class DashController extends Controller
         ]);
 
         // Upload foto profil jika ada
-        if ($request->hasFile('Avatar')) {
+        if ($request->hasFile('Avatar') && $request->file('Avatar')->isValid()) {
             $avatar = $request->file('Avatar');
-            $avatarName = time().'.'.$avatar->getClientOriginalExtension();
-            $avatar->storeAs('public/user_profile', $avatarName);
+            $avatarName = time() . '.' . $avatar->getClientOriginalExtension();
+
+            // Simpan ke folder public/storage/user_profile (bukan storage/app)
+            $avatar->move(public_path('storage/user_profile'), $avatarName);
+
             $user->profile_picture = $avatarName;
             $user->save();
         }
 
         return redirect()->back()->with('success', 'Profile updated successfully.');
     }
+
     public function deleteProfilePicture()
     {
         $user = Auth::user();
-    
+
         if ($user->profile_picture) {
-            // Hapus file profile_picture
-            Storage::delete('public/user_profile/' . $user->profile_picture);
-            
+            // Hapus file dari public/storage/user_profile
+            $filePath = public_path('storage/user_profile/' . $user->profile_picture);
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
             // Set profile_picture ke null
             $user->profile_picture = null;
             $user->save();
-        
+
             return redirect()->back()->with('success', 'Profile picture deleted successfully.');
         }
-    
+
         return redirect()->back()->with('error', 'No profile picture to delete.');
     }
 }

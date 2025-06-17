@@ -10,45 +10,56 @@
                         <h3>Profile</h3>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('profile.update') }}" method="POST" id="profileForm" enctype="multipart/form-data">
+                        <form action="{{ route('profile.update') }}" method="POST" id="profileForm"
+                            enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
 
                             <!-- Menampilkan foto profil saat ini -->
                             <div class="form-group">
                                 <label for="currentAvatar"></label>
-                                <img src="{{ Auth::user()->profile_picture ? asset('storage/user_profile/' . Auth::user()->profile_picture) : asset('assets/default-avatar.jpg') }}" alt="Current Avatar" class="img-fluid mb-2" style="max-width: 200px;">
-                            </div>                         
+                                @php
+                                    $profilePath = public_path('storage/user_profile/' . Auth::user()->profile_picture);
+                                @endphp
+
+                                <img src="{{ Auth::user()->profile_picture && file_exists($profilePath)
+        ? asset('storage/user_profile/' . Auth::user()->profile_picture)
+        : asset('assets/default-avatar.jpg') }}" alt="Current Avatar" class="img-fluid mb-2" style="max-width: 200px;">
+                            </div>
                             <div class="form-group">
                                 <label for="avatar"></label>
                                 <input type="file" class="form-control-file" id="avatar" name="Avatar">
-                            </div>                            
+                            </div>
                             <div class="form-group">
                                 <label for="name">Full Name:</label>
-                                <input type="text" class="form-control" id="name" name="NamaLengkap" value="{{ Auth::user()->NamaLengkap }}">
+                                <input type="text" class="form-control" id="name" name="NamaLengkap"
+                                    value="{{ Auth::user()->NamaLengkap }}">
                             </div>
                             <div class="form-group">
                                 <label for="name">Username:</label>
-                                <input type="text" class="form-control" id="name" name="Username" value="{{ Auth::user()->Username }}">
+                                <input type="text" class="form-control" id="name" name="Username"
+                                    value="{{ Auth::user()->Username }}">
                             </div>
                             <div class="form-group">
                                 <label for="email">Email:</label>
-                                <input type="email" class="form-control" id="email" name="Email" value="{{ Auth::user()->Email }}">
+                                <input type="email" class="form-control" id="email" name="Email"
+                                    value="{{ Auth::user()->Email }}">
                             </div>
                             <div class="form-group">
                                 <label for="address">Address:</label>
-                                <textarea class="form-control" id="address" rows="3" name="Alamat">{{ Auth::user()->Alamat }}</textarea>
+                                <textarea class="form-control" id="address" rows="3"
+                                    name="Alamat">{{ Auth::user()->Alamat }}</textarea>
                             </div>
 
                             <br>
                             <button type="submit" class="btn btn-primary" id="submitButton">Save Changes</button>
                         </form>
                         @if(Auth::user()->profile_picture)
-                        <form action="{{ route('profile.deletePicture') }}" method="POST" id="deletePictureForm">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger mt-3">Delete Picture</button>
-                        </form>                        
+                            <form action="{{ route('profile.deletePicture') }}" method="POST" id="deletePictureForm">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger mt-3">Delete Picture</button>
+                            </form>
                         @endif
                     </div>
                 </div>
